@@ -5,10 +5,10 @@ file using an input text file.
 
 To show help:
 ```
-$ go run HelloWorld.go -help
+$ go run textToPdf.go -help
 Help Message
 
-Usage: HelloWorld [options]
+Usage: textToPdf [options]
   -font string
     	Font 'Arial', 'Courier', or 'Times'; default Arial (default "Arial")
   -fs float
@@ -28,6 +28,6 @@ $
 
 Example: create a PDF of the source using the Courier font:
 ```
-$ go run HelloWorld.go -i HelloWorld.go -font Courier -o $HOME/data/hw.pdf
+$ go run textToPdf.go -i textToPdf.go -font Courier -o $HOME/data/textToPdf.pdf
 $ 
 ```
