@@ -13,10 +13,12 @@ import (
 	bf "gopkg.in/russross/blackfriday.v2"
 )
 
+var input = flag.String("i", "", "Input text filename; default is os.Stdin")
+var output = flag.String("o", "", "Output PDF filename; required")
+var debug = flag.Bool("debug", false, "Output debug info; default false")
+var help = flag.Bool("help", false, "Show usage message")
+
 func main() {
-	input := flag.String("i", "", "Input text filename; default is os.Stdin")
-	output := flag.String("o", "", "Output PDF filename; required")
-	help := flag.Bool("help", false, "Show usage message")
 
 	flag.Parse()
 
@@ -47,12 +49,6 @@ func main() {
 	//sContent = strings.Replace(sContent, "\t", strings.Repeat(" ", *tabwidth), -1)
 
 	pf := NewPdfRenderer()
-	pf.H1.Spacing = 24
-	pf.H2.Spacing = 22
-	pf.H3.Spacing = 20
-	pf.H4.Spacing = 5
-	pf.H5.Spacing = 3
-	pf.H6.Spacing = 0
 
 	_ = bf.Run(content, bf.WithRenderer(pf))
 
@@ -86,6 +82,9 @@ type PdfRenderer struct {
 	// normal text
 	Normal Styler
 
+	// backticked text
+	Backtick Styler
+
 	// headings
 	H1 Styler
 	H2 Styler
@@ -107,15 +106,18 @@ func NewPdfRenderer() *PdfRenderer {
 	pdfr.fontdir = "."
 
 	// Normal Text
-	pdfr.Normal = Styler{Font: "Arial", Style: "", Size: 12, Spacing: 3}
+	pdfr.Normal = Styler{Font: "Arial", Style: "", Size: 12, Spacing: 5}
+
+	// Backticked text
+	pdfr.Backtick = Styler{Font: "Courier", Style: "", Size: 12, Spacing: 5}
 
 	// Headings
-	pdfr.H1 = Styler{Font: "Arial", Style: "b", Size: 24, Spacing: 5}
-	pdfr.H2 = Styler{Font: "Arial", Style: "b", Size: 22, Spacing: 5}
-	pdfr.H3 = Styler{Font: "Arial", Style: "b", Size: 20, Spacing: 5}
-	pdfr.H4 = Styler{Font: "Arial", Style: "b", Size: 18, Spacing: 5}
-	pdfr.H5 = Styler{Font: "Arial", Style: "b", Size: 16, Spacing: 5}
-	pdfr.H6 = Styler{Font: "Arial", Style: "b", Size: 14, Spacing: 5}
+	pdfr.H1 = Styler{Font: "Arial", Style: "b", Size: 24, Spacing: 12}
+	pdfr.H2 = Styler{Font: "Arial", Style: "b", Size: 22, Spacing: 11}
+	pdfr.H3 = Styler{Font: "Arial", Style: "b", Size: 20, Spacing: 10}
+	pdfr.H4 = Styler{Font: "Arial", Style: "b", Size: 18, Spacing: 9}
+	pdfr.H5 = Styler{Font: "Arial", Style: "b", Size: 16, Spacing: 8}
+	pdfr.H6 = Styler{Font: "Arial", Style: "b", Size: 14, Spacing: 6}
 
 	pdfr.pdf = gofpdf.New(pdfr.Orientation, pdfr.units,
 		pdfr.Papersize, pdfr.fontdir)
@@ -145,94 +147,106 @@ func (r *PdfRenderer) write(s Styler, t string) {
 func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.WalkStatus {
 	switch node.Type {
 	case bf.Text:
+		s := strings.Replace(string(node.Literal), "\n", " ", -1)
+		dbg("Text", s)
 		r.setFont(r.current)
-		r.write(r.current, string(node.Literal))
+		r.write(r.current, s)
 	case bf.Softbreak:
-		dbg("Not handled: bf.Softbreak")
+		dbg("Softbreak", "Not handled")
 	case bf.Hardbreak:
-		dbg("Not handled: bf.Hardbreak")
+		dbg("Hardbreak", "Not handled")
 	case bf.Emph:
 		if entering {
+			dbg("Emph (entering)", "Processing")
 			r.current.Style += "i"
 		} else {
+			dbg("Emph (leaving)", "Processing")
 			r.current.Style = strings.Replace(r.current.Style, "i", "", -1)
 		}
 	case bf.Strong:
 		if entering {
+			dbg("Strong (entering)", "Processing")
 			r.current.Style += "b"
 		} else {
+			dbg("Strong (leaving)", "Processing")
 			r.current.Style = strings.Replace(r.current.Style, "b", "", -1)
 		}
 	case bf.Del:
 		if entering {
-			dbg("Not handled: bf.Del (entering)")
+			dbg("DEL (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.Del (!entering)")
+			dbg("DEL (leaving)", "Not handled")
 		}
 	case bf.HTMLSpan:
-		dbg("Not handled: bf.HTMLSpan")
+		dbg("HTMLSpan", "Not handled")
 	case bf.Link:
 		// mark it but don't link it if it is not a safe link: no smartypants
 		//dest := node.LinkData.Destination
 		if entering {
-			dbg("Not handled: bf.Link (entering)")
+			dbg("Link (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.Link (!entering)")
+			dbg("Link (leaving)", "Not handled")
 		}
 	case bf.Image:
 		if entering {
-			dbg("Not handled: bf.Image (entering)")
+			dbg("Image (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.Image (!entering)")
+			dbg("Image (leaving)", "Not handled")
 		}
 	case bf.Code:
-		dbg("Not handled: bf.Code")
-		//r.out(w, codeTag)
-		//escapeHTML(w, node.Literal)
-		//r.out(w, codeCloseTag)
+		dbg("Code", "Processing")
+		r.setFont(r.Backtick)
+		r.write(r.Backtick, string(node.Literal))
 	case bf.Document:
-		break
+		dbg("Document", "Processing")
+		//break
 	case bf.Paragraph:
 		if entering {
-			r.setFont(r.Normal)
-		} else {
+			dbg("Paragraph (entering)", "Processing")
+			r.current = r.Normal
 			r.cr()
+		} else {
+			dbg("Paragraph (leaving)", "Processing")
+			r.pdf.Ln(r.current.Size)
 		}
 	case bf.BlockQuote:
 		if entering {
-			dbg("Not handled: bf.BlockQuote (entering)")
+			dbg("BlockQuote (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.BlockQuote (!entering)")
+			dbg("BlockQuote (leaving)", "Not handled")
 		}
 	case bf.HTMLBlock:
-		dbg("Not handled: bf.HTMLBlock")
+		dbg("HTMLBlock", "Not handled")
 	case bf.Heading:
-		//openTag, closeTag := headingTagsFromLevel(node.Level)
-		//dbg(fmt.Sprintf("Heading level is %v", node.HeadingData.Level))
 		if entering {
+			r.cr()
 			switch node.HeadingData.Level {
 			case 1:
+				dbg("Heading (1, entering)", "Processing")
 				r.current = r.H1
 			case 2:
+				dbg("Heading (2, entering)", "Processing")
 				r.current = r.H2
 			case 3:
+				dbg("Heading (3, entering)", "Processing")
 				r.current = r.H3
 			case 4:
+				dbg("Heading (4, entering)", "Processing")
 				r.current = r.H4
 			case 5:
+				dbg("Heading (5, entering)", "Processing")
 				r.current = r.H5
 			case 6:
+				dbg("Heading (6, entering)", "Processing")
 				r.current = r.H6
 			}
 		} else {
-			r.cr()
+			dbg("Heading (leaving)", "Processing")
 			r.current = r.Normal
+			r.cr()
 		}
 	case bf.HorizontalRule:
-		//r.cr(w)
-		//r.outHRTag(w)
-		//r.cr(w)
-		dbg("Not handled: bf.HorizontalRule")
+		dbg("HorizontalRule", "Not handled")
 	case bf.List:
 		/*
 			openTag := ulTag
@@ -247,9 +261,9 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			}
 		*/
 		if entering {
-			dbg("Not handled: bf.List (entering)")
+			dbg("List (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.List (!entering)")
+			dbg("List (leaving)", "Not handled")
 		}
 	case bf.Item:
 		/*
@@ -265,17 +279,26 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			}
 		*/
 		if entering {
-			dbg("Not handled: bf.Item (entering)")
+			dbg("Item (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.Item (!entering)")
+			dbg("Item (leaving)", "Not handled")
 		}
 	case bf.CodeBlock:
-		dbg("Not handled: bf.CodeBlock")
+		dbg("Codeblock", "Processing")
+		r.cr()
+		r.pdf.SetFillColor(200, 220, 255)
+		r.setFont(r.Backtick)
+		lines := strings.Split(string(node.Literal), "\n")
+		for n := range lines {
+			r.pdf.CellFormat(0, r.Backtick.Size,
+				lines[n], "", 1, "LT", true, 0, "")
+		}
+
 	case bf.Table:
 		if entering {
-			dbg("Not handled: bf.Table (entering)")
+			dbg("Table (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.Table (!entering)")
+			dbg("Table (leaving)", "Not handled")
 		}
 	case bf.TableCell:
 		/*
@@ -287,27 +310,27 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			}
 		*/
 		if entering {
-			dbg("Not handled: bf.TableCell (entering)")
+			dbg("TableCell (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.TableCell (!entering)")
+			dbg("TableCell (leaving)", "Not handled")
 		}
 	case bf.TableHead:
 		if entering {
-			dbg("Not handled: bf.TableHead (entering)")
+			dbg("TableHead (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.TableHead (!entering)")
+			dbg("TableHead (leaving)", "Not handled")
 		}
 	case bf.TableBody:
 		if entering {
-			dbg("Not handled: bf.TableBody (entering)")
+			dbg("TableBody (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.TableBody (!entering)")
+			dbg("TableBody (leaving)", "Not handled")
 		}
 	case bf.TableRow:
 		if entering {
-			dbg("Not handled: bf.TableRow (entering)")
+			dbg("TableRow (entering)", "Not handled")
 		} else {
-			dbg("Not handled: bf.TableRow (!entering)")
+			dbg("TableRow (leaving)", "Not handled")
 		}
 	default:
 		panic("Unknown node type " + node.Type.String())
@@ -317,21 +340,23 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 
 // RenderHeader writes HTML document preamble and TOC if requested.
 func (r *PdfRenderer) RenderHeader(w io.Writer, ast *bf.Node) {
-	dbg("Not handled: RenderHeader")
+	dbg("RenderHeader", "Not handled")
 }
 
 // RenderFooter writes HTML document footer.
 func (r *PdfRenderer) RenderFooter(w io.Writer, ast *bf.Node) {
-	dbg("Not handled: RenderFooter")
+	dbg("RenderFooter", "Not handled")
 }
 
 func (r *PdfRenderer) cr() {
-	r.write(r.current, "\n")
+	r.pdf.Ln(r.current.Size + r.current.Spacing)
 }
 
 // Helper functions
-func dbg(msg string) {
-	fmt.Println(msg)
+func dbg(source, msg string) {
+	if *debug {
+		fmt.Printf("[%v] %v\n", source, msg)
+	}
 }
 
 func usage(msg string) {
