@@ -85,6 +85,9 @@ type PdfRenderer struct {
 	// backticked text
 	Backtick Styler
 
+	// blockquote text
+	Blockquote Styler
+
 	// headings
 	H1 Styler
 	H2 Styler
@@ -92,6 +95,9 @@ type PdfRenderer struct {
 	H4 Styler
 	H5 Styler
 	H6 Styler
+
+	// state booleans
+	inBlockquote bool
 }
 
 // NewPdfRenderer creates and configures an PdfRenderer object,
@@ -118,6 +124,9 @@ func NewPdfRenderer() *PdfRenderer {
 	pdfr.H4 = Styler{Font: "Arial", Style: "b", Size: 18, Spacing: 9}
 	pdfr.H5 = Styler{Font: "Arial", Style: "b", Size: 16, Spacing: 8}
 	pdfr.H6 = Styler{Font: "Arial", Style: "b", Size: 14, Spacing: 6}
+
+	pdfr.inBlockquote = false
+	pdfr.Blockquote = Styler{Font: "Arial", Style: "i", Size: 12, Spacing: 5}
 
 	pdfr.pdf = gofpdf.New(pdfr.Orientation, pdfr.units,
 		pdfr.Papersize, pdfr.fontdir)
@@ -203,17 +212,25 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 	case bf.Paragraph:
 		if entering {
 			dbg("Paragraph (entering)", "Processing")
-			r.current = r.Normal
+			if r.inBlockquote {
+				// no change to styler
+			} else {
+				r.current = r.Normal
+			}
 			r.cr()
 		} else {
 			dbg("Paragraph (leaving)", "Processing")
-			r.pdf.Ln(r.current.Size)
+			r.cr()
 		}
 	case bf.BlockQuote:
 		if entering {
-			dbg("BlockQuote (entering)", "Not handled")
+			dbg("BlockQuote (entering)", "Processing")
+			r.inBlockquote = true
+			r.current = r.Blockquote
 		} else {
-			dbg("BlockQuote (leaving)", "Not handled")
+			dbg("BlockQuote (leaving)", "Processing")
+			r.inBlockquote = false
+			r.current = r.Normal
 		}
 	case bf.HTMLBlock:
 		dbg("HTMLBlock", "Not handled")
@@ -288,7 +305,7 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 		r.cr()
 		r.pdf.SetFillColor(200, 220, 255)
 		r.setFont(r.Backtick)
-		lines := strings.Split(string(node.Literal), "\n")
+		lines := strings.Split(strings.TrimSpace(string(node.Literal)), "\n")
 		for n := range lines {
 			r.pdf.CellFormat(0, r.Backtick.Size,
 				lines[n], "", 1, "LT", true, 0, "")
