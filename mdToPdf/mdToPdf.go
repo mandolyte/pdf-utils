@@ -166,18 +166,18 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 		dbg("Hardbreak", "Not handled")
 	case bf.Emph:
 		if entering {
-			dbg("Emph (entering)", "Processing")
+			dbg("Emph (entering)", "")
 			r.current.Style += "i"
 		} else {
-			dbg("Emph (leaving)", "Processing")
+			dbg("Emph (leaving)", "")
 			r.current.Style = strings.Replace(r.current.Style, "i", "", -1)
 		}
 	case bf.Strong:
 		if entering {
-			dbg("Strong (entering)", "Processing")
+			dbg("Strong (entering)", "")
 			r.current.Style += "b"
 		} else {
-			dbg("Strong (leaving)", "Processing")
+			dbg("Strong (leaving)", "")
 			r.current.Style = strings.Replace(r.current.Style, "b", "", -1)
 		}
 	case bf.Del:
@@ -203,15 +203,15 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			dbg("Image (leaving)", "Not handled")
 		}
 	case bf.Code:
-		dbg("Code", "Processing")
+		dbg("Code", "")
 		r.setFont(r.Backtick)
 		r.write(r.Backtick, string(node.Literal))
 	case bf.Document:
-		dbg("Document", "Processing")
+		dbg("Document", "Not Handled")
 		//break
 	case bf.Paragraph:
 		if entering {
-			dbg("Paragraph (entering)", "Processing")
+			dbg("Paragraph (entering)", "")
 			if r.inBlockquote {
 				// no change to styler
 			} else {
@@ -219,16 +219,16 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			}
 			r.cr()
 		} else {
-			dbg("Paragraph (leaving)", "Processing")
+			dbg("Paragraph (leaving)", "")
 			r.cr()
 		}
 	case bf.BlockQuote:
 		if entering {
-			dbg("BlockQuote (entering)", "Processing")
+			dbg("BlockQuote (entering)", "")
 			r.inBlockquote = true
 			r.current = r.Blockquote
 		} else {
-			dbg("BlockQuote (leaving)", "Processing")
+			dbg("BlockQuote (leaving)", "")
 			r.inBlockquote = false
 			r.current = r.Normal
 		}
@@ -239,26 +239,26 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			r.cr()
 			switch node.HeadingData.Level {
 			case 1:
-				dbg("Heading (1, entering)", "Processing")
+				dbg("Heading (1, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H1
 			case 2:
-				dbg("Heading (2, entering)", "Processing")
+				dbg("Heading (2, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H2
 			case 3:
-				dbg("Heading (3, entering)", "Processing")
+				dbg("Heading (3, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H3
 			case 4:
-				dbg("Heading (4, entering)", "Processing")
+				dbg("Heading (4, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H4
 			case 5:
-				dbg("Heading (5, entering)", "Processing")
+				dbg("Heading (5, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H5
 			case 6:
-				dbg("Heading (6, entering)", "Processing")
+				dbg("Heading (6, entering)", fmt.Sprintf("%v", node.HeadingData))
 				r.current = r.H6
 			}
 		} else {
-			dbg("Heading (leaving)", "Processing")
+			dbg("Heading (leaving)", "")
 			r.current = r.Normal
 			r.cr()
 		}
@@ -301,7 +301,7 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 			dbg("Item (leaving)", "Not handled")
 		}
 	case bf.CodeBlock:
-		dbg("Codeblock", "Processing")
+		dbg("Codeblock", fmt.Sprintf("%v", node.CodeBlockData))
 		r.cr()
 		r.pdf.SetFillColor(200, 220, 255)
 		r.setFont(r.Backtick)
