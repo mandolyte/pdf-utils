@@ -1,7 +1,11 @@
 # Heading One
 This is a paragraph with some *emphasized text* - OK?
 
-NOTE: for testing be sure to avoid CRLF formatted text. May need to develop a workaround for some issues with including CR characters.
+- this is an unordered list
+- this is second item in unordered list
+
+1. This is a numbered list
+2. This is second item in numbered list
 
 ## Heading Two
 This is a paragraph with some **emphasized text** - OK?
