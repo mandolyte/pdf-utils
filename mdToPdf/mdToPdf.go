@@ -104,9 +104,13 @@ type PdfRenderer struct {
 	H6 Styler
 
 	// state booleans
-	inBlockquote bool
-	inHeading    bool
-	DebugMode    bool
+	inBlockquote      bool
+	inHeading         bool
+	inUnorderedItem   bool
+	inOrderedItem     bool
+	inDefinitionItem  bool
+	DebugMode         bool
+	currentItemNumber int
 }
 
 // NewPdfRenderer creates and configures an PdfRenderer object,
@@ -175,8 +179,13 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 		s := string(node.Literal)
 		s = strings.Replace(s, "\n", " ", -1)
 		r.Tracer("Text", s)
+		if r.inUnorderedItem {
+			r.write(r.current, "- ")
+		} else if r.inOrderedItem {
+			r.write(r.current, fmt.Sprintf("%v. ", r.currentItemNumber))
+		}
 		r.write(r.current, s)
-		if r.inHeading {
+		if r.inHeading || r.inUnorderedItem || r.inOrderedItem || r.inDefinitionItem {
 			r.write(r.current, "\n") // output a newline with heading LH size
 		}
 	case bf.Softbreak:
@@ -229,6 +238,10 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 		r.Tracer("Document", "Not Handled")
 		//break
 	case bf.Paragraph:
+		if r.inUnorderedItem || r.inOrderedItem || r.inDefinitionItem {
+			// ignore paragraph signals for list items
+			break
+		}
 		if entering {
 			r.Tracer("Paragraph (entering)", "")
 			if r.inBlockquote {
@@ -291,40 +304,58 @@ func (r *PdfRenderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.W
 	case bf.HorizontalRule:
 		r.Tracer("HorizontalRule", "Not handled")
 	case bf.List:
-		/*
-			openTag := ulTag
-			closeTag := ulCloseTag
-			if node.ListFlags&ListTypeOrdered != 0 {
-				openTag = olTag
-				closeTag = olCloseTag
-			}
-			if node.ListFlags&ListTypeDefinition != 0 {
-				openTag = dlTag
-				closeTag = dlCloseTag
-			}
-		*/
+		listKind := "Unordered"
+		if node.ListFlags&bf.ListTypeOrdered != 0 {
+			listKind = "Ordered"
+		}
+		if node.ListFlags&bf.ListTypeDefinition != 0 {
+			listKind = "Definition"
+		}
 		if entering {
-			r.Tracer("List (entering)", "Not handled")
+			switch listKind {
+			case "Unordered":
+			case "Ordered":
+				r.currentItemNumber = 0
+			case "Definition":
+			}
+			r.Tracer(fmt.Sprintf("%v List (entering)", listKind),
+				fmt.Sprintf("%v", node.ListData))
 		} else {
-			r.Tracer("List (leaving)", "Not handled")
+			r.Tracer(fmt.Sprintf("%v List (leaving)", listKind),
+				fmt.Sprintf("%v", node.ListData))
+			r.cr()
 		}
 	case bf.Item:
-		/*
-			openTag := liTag
-			closeTag := liCloseTag
-			if node.ListFlags&ListTypeDefinition != 0 {
-				openTag = ddTag
-				closeTag = ddCloseTag
-			}
-			if node.ListFlags&ListTypeTerm != 0 {
-				openTag = dtTag
-				closeTag = dtCloseTag
-			}
-		*/
+		listKind := "Unordered"
+		if node.ListFlags&bf.ListTypeOrdered != 0 {
+			listKind = "Ordered"
+		}
+		if node.ListFlags&bf.ListTypeDefinition != 0 {
+			listKind = "Definition"
+		}
 		if entering {
-			r.Tracer("Item (entering)", "Not handled")
+			switch listKind {
+			case "Unordered":
+				r.inUnorderedItem = true
+			case "Ordered":
+				r.inOrderedItem = true
+				r.currentItemNumber++
+			case "Definition":
+				r.inDefinitionItem = true
+			}
+			r.Tracer(fmt.Sprintf("%v Item (entering)", listKind),
+				fmt.Sprintf("%v", node.ListData))
 		} else {
-			r.Tracer("Item (leaving)", "Not handled")
+			switch listKind {
+			case "Unordered":
+				r.inUnorderedItem = false
+			case "Ordered":
+				r.inOrderedItem = false
+			case "Definition":
+				r.inDefinitionItem = false
+			}
+			r.Tracer(fmt.Sprintf("%v Item (leaving)", listKind),
+				fmt.Sprintf("%v", node.ListData))
 		}
 	case bf.CodeBlock:
 		r.Tracer("Codeblock", fmt.Sprintf("%v", node.CodeBlockData))

@@ -1,11 +1,15 @@
 # Heading One
 This is a paragraph with some *emphasized text* - OK?
 
+Here is an unordered list:
+
 - this is an unordered list
 - this is second item in unordered list
 
+Here is an ordered/numbered list:
+
 1. This is a numbered list
-2. This is second item in numbered list
+1. This is second item in numbered list
 
 ## Heading Two
 This is a paragraph with some **emphasized text** - OK?
