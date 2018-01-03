@@ -1,7 +1,12 @@
 # Notes on Markdown to PDF 
 
+*Limitations*
+At present nested (self) elements are handled, such as a blockquote 
+within a blockquote. This will require a push/pop stack or some
+such technique to handle the recursive nature of self-nested elements.
+
 *On Debug/Tracing* 
-The trace is output to STDOUT. See `debug.txt` as an example.
+The trace is output to `debug.txt`.
 This has proved invaluable in understanding what the BlackFriday
 parser is reporting.
 
