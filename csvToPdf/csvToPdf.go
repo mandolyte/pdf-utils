@@ -48,7 +48,7 @@ func main() {
 	}
 
 	var cols []float64
-
+	ok := false
 	for ifs := *fontsize; ifs >= *minfontsize; ifs-- {
 		fmt.Printf("Attempt fit using font size: %v", ifs)
 		pdf.SetFont(*font, "", float64(ifs))
@@ -95,7 +95,11 @@ func main() {
 	}
 
 	// Good to go... make the PDF now.
-	makepdf(*output, pdf, csvall, cols)
+	if ok {
+		makepdf(*output, pdf, csvall, cols)
+	} else {
+		log.Fatal("Unable to fit CSV onto page using provided constraints")
+	}
 }
 
 func makepdf(filename string, pdf *gofpdf.Fpdf, csvall [][]string, cols []float64) {
